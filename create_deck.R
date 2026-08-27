@@ -1,3 +1,57 @@
+scales <- list(
+  freq = c("(fast) nie",
+           "selten",
+           "manchmal",
+           "oft",
+           "(fast) immer"),
+  
+  intens = c("sehr leicht",
+             "leicht",
+             "neutral",
+             "schwierig"
+  ),
+  
+  howmuch = c("Ich kann es nicht beurteilen",
+              "wenig",
+              "mittelmäßig",
+              "ziemlich",
+              "sehr"),
+  helpful = c("überhaupt nicht hilfreich",
+              "wenig hilfreich",
+              "neutral",
+              "hilfreich",
+              "sehr hilfreich"),
+  
+  yesno = c("nein",
+            "eher nein",
+            "unsicher",
+            "eher ja",
+            "ja, auf jeden Fall"),
+  
+  education = c("Andere / keine Angabe",
+                "Hauptschulabschluss /\n Volksschulabschluss",
+                "Mittlere Reife (Realschule)",
+                "(Fach-)Abitur")
+  
+)
+
+ordinal_scales <- list(
+  "CC02" = scales$howmuch,
+  "DD03" = scales$intens,
+  "EE01" = scales$freq,
+  "DD01" = scales$freq,
+  "EE02" = scales$freq,
+  "EE04" = scales$intens,
+  "FF01" = scales$freq,
+  "FF03" = scales$intens,
+  "FF05" = scales$freq,
+  "GG01" = scales$freq,
+  "HH01" = scales$helpful,
+  "HH03" = scales$yesno,
+  "HH05" = scales$yesno,
+  "II04" = scales$education
+)
+
 create_deck <- function(data) {
   card_list <- list()
   col_names <- names(data)
@@ -32,14 +86,28 @@ create_deck <- function(data) {
       )
       
     } else if (base %in% col_names) {
-      card_list[[base]] <- structure(
-        list(
-          name = base,
-          label = clean_label 
-        ),
-        class = c("single_choice", "categorical")
-      )
+      # Controlla se la variabile è nel dizionario delle scale ordinali
+      if (base %in% names(ordinal_scales)) {
+        card_list[[base]] <- structure(
+          list(
+            name = base,
+            label = clean_label,
+            levels = ordinal_scales[[base]] # Salva l'ordine nella carta!
+          ),
+          class = c("ordinal", "single_choice") # Nuova classe
+        )
+      } else {
+        # Variabile nominale normale (come il sesso)
+        card_list[[base]] <- structure(
+          list(
+            name = base,
+            label = clean_label 
+          ),
+          class = c("single_choice", "categorical")
+        )
+      }
     }
+    
   }
   
   return(card_list)

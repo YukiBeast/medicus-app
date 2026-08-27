@@ -78,7 +78,27 @@ server <- function(input, output, session) {
     rv$deck <- create_deck(rv$daten)
     
     # 3. Generate the list for the dropdown menus
-    dropdown_choices <- setNames(names(rv$deck), sapply(rv$deck, function(x) x$label))
+    dropdown_choices <- setNames(names(rv$deck), sapply(names(rv$deck), function(code) {
+      
+      # 1. Kategorie-Zahl aus dem Buchstaben generieren (A=0, B=1, C=2, D=3...)
+      # Zieht den 1. Buchstaben (z.B. "C" aus "CC02")
+      first_letter <- substring(code, 1, 1) 
+      cat_num <- match(first_letter, LETTERS) - 1
+      
+      # 2. Fragen-Zahl aus dem Code ziehen (z.B. "02" -> 2)
+      question_num <- as.numeric(substring(code, 3, 4))
+      
+      # 3. Alte Zahlen (wie "3.4" oder "2") aus dem ursprünglichen Label entfernen
+      old_label <- rv$deck[[code]]$label
+      # Regex \b sucht nach eigenständigen Zahlen (mit oder ohne Punkt)
+      clean_label <- gsub("\\b[0-9]+(\\.[0-9]+)?\\b", "", old_label)
+      
+      # 4. Überflüssige Leerzeichen (die durch das Löschen entstehen) entfernen
+      clean_label <- trimws(gsub("\\s+", " ", clean_label))
+      
+      # 5. Neues Label zusammenbauen (z.B. "2.2 Beschwerden")
+      return(paste0(cat_num, ".", question_num, " ", clean_label))
+    }))
     
     # 4. Update the dropdown menus in the UI with the newly generated names
     updateSelectInput(session, "var1", choices = dropdown_choices)
