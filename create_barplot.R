@@ -1,4 +1,5 @@
 create_barplot <- function(item1, item2, data, share) {
+  library(dplyr)
   dt1 <- extract(item1, data)
   
   # If-Case: only display 1 variable.
