@@ -1,3 +1,53 @@
+create_deck <- function(data, codebook, scales) {
+  card_list <- list()
+  
+  for (i in seq_len(nrow(codebook))) {
+    row <- codebook[i, ]
+    item_code <- as.character(row$item)
+    
+    # Skip if the variable does not exist in the loaded data
+    if (!any(grepl(item_code, names(data)))) next 
+    
+    card <- list(name = item_code, label = row$label)
+    
+    # For MULTIPLE CHOICE items
+    if (row$class == "multiple") {
+      card$prefix <- paste0("^", item_code, "_")
+      class(card) <- c("multiple_choice", "categorical")
+      
+      # For SINGLE CHOICE 
+    } else if (row$class == "single") {
+      
+      if (!is.na(row$scale) && row$scale %in% names(scales)) {
+        # CASE 1: Ordinal Scale (e.g., freq, intens)
+        card$levels <- scales[[row$scale]]
+        class(card) <- c("ordinal", "single_choice")
+        
+      } else if (!is.na(row$scale) && row$scale == "categorical") {
+        # CASE 2: Categorical (e.g., Geschlecht / Gender)
+        class(card) <- c("single_choice", "categorical")
+        
+      } else if (!is.na(row$scale) && (row$scale == "numerical" || row$scale == "numeric")) {
+        # CASE 3: Numeric (e.g., Alter / Age) - Now INSIDE the 'single' block!
+        
+        # 1. Remove any blank spaces from the string (e.g., "59, 69" -> "59,69")
+        breaks_clean <- gsub(" ", "", as.character(row$breaks))
+        
+        # 2. Split the string and convert it into a numeric vector
+        card$breaks <- as.numeric(strsplit(breaks_clean, ",")[[1]])
+        
+        # 3. Assign the specific class
+        class(card) <- c("numeric", "single_choice")
+      }
+    }
+    
+    # Save the card to the deck (Outside of all if/else blocks!)
+    card_list[[item_code]] <- card
+  }
+  
+  return(card_list)
+}
+
 scales <- list(
   freq = c("(fast) nie",
            "selten",
@@ -35,84 +85,4 @@ scales <- list(
   
 )
 
-ordinal_scales <- list(
-  "CC02" = scales$howmuch,
-  "DD03" = scales$intens,
-  "EE01" = scales$freq,
-  "DD01" = scales$freq,
-  "EE02" = scales$freq,
-  "EE04" = scales$intens,
-  "FF01" = scales$freq,
-  "FF03" = scales$intens,
-  "FF05" = scales$freq,
-  "GG01" = scales$freq,
-  "HH01" = scales$helpful,
-  "HH03" = scales$yesno,
-  "HH05" = scales$yesno,
-  "II04" = scales$education
-)
-
-create_deck <- function(data) {
-  card_list <- list()
-  col_names <- names(data)
-  labels_list <- var_label(data)
-  
-  # 1. Find all potential prefixes
-  base_names <- unique(gsub("_.*$", "", col_names))
-  
-  # 2. FILTER: Keep only base names that contain at least one number (0-9)
-  base_names <- grep("[0-9]", base_names, value = TRUE)
-  
-  # 3. Loop through each valid base name
-  for (base in base_names) {
-    
-    # Extract the raw label from your list (fallback to base name if missing)
-    raw_label <- if (!is.null(labels_list[[base]])) labels_list[[base]] else base
-    
-    # Clean the label: remove ":" and everything after, then trim whitespace
-    clean_label <- trimws(sub(":.*$", "", raw_label))
-    
-    # Find all columns that start with this base name + an underscore
-    mc_columns <- grep(paste0("^", base, "_"), col_names, value = TRUE)
-    
-    if (length(mc_columns) > 1) {
-      card_list[[base]] <- structure(
-        list(
-          name = base,
-          prefix = paste0("^", base, "_"),
-          label = clean_label 
-        ),
-        class = c("multiple_choice", "categorical")
-      )
-      
-    } else if (base %in% col_names) {
-      # Controlla se la variabile è nel dizionario delle scale ordinali
-      if (base %in% names(ordinal_scales)) {
-        card_list[[base]] <- structure(
-          list(
-            name = base,
-            label = clean_label,
-            levels = ordinal_scales[[base]] # Salva l'ordine nella carta!
-          ),
-          class = c("ordinal", "single_choice") # Nuova classe
-        )
-      } else {
-        # Variabile nominale normale (come il sesso)
-        card_list[[base]] <- structure(
-          list(
-            name = base,
-            label = clean_label 
-          ),
-          class = c("single_choice", "categorical")
-        )
-      }
-    }
-    
-  }
-  
-  return(card_list)
-}
-
-# --- Usage ---
-# Pass both your data and your labels object into the function
-# my_deck <- create_deck(med)
+# initial_deck <- create_deck(med, cb, scales)

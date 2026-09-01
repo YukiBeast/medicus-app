@@ -37,5 +37,20 @@ extract.ordinal <- function(item, data) {
   return(temp_data[, .(id, answer)])
 }
 
-# extract(my_deck$BB02, med)  # single choice
-# extract(my_deck$DD02, med)  # multiple choice
+extract.numeric <- function(item, data) {
+  # 1. Prendi i dati grezzi numerici
+  temp_data <- data[, .(id = CASE, raw_wert = get(item$name))]
+  
+  # 2. Taglia la variabile continua in categorie usando i breaks della carta
+  temp_data[, answer := cut(raw_wert, 
+                            breaks = item$breaks, 
+                            right = TRUE)]
+  
+  # 3. Restituisci il formato standard per plot e tabelle
+  return(temp_data[, .(id, answer)])
+}
+# 
+# extract(initial_deck$BB01, med)  # numeric (Alter)
+# extract(initial_deck$BB02, med)
+# extract(initial_deck$DD02, med)  # multiple choice
+

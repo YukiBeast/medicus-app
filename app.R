@@ -5,14 +5,12 @@ library(ggplot2)
 # ==========================================
 # 1. GLOBAL SETUP
 # ==========================================
-# Load only the FUNCTIONS, do not execute the data yet
-source("load_data.R")         # Must contain a function: load_and_clean_data(file_path)
-source("assign_labels.R")     # Assuming 'labels_list' is created here
-source("create_deck.R")
+source("load_data.R")         
+source("assign_labels.R")     
+source("create_deck.R")       # Contains 'scales'
 source("extract_methods.R")
 source("create_cross_table.R")
 source("create_barplot.R")
-
 
 # ==========================================
 # 2. USER INTERFACE (UI)
@@ -23,21 +21,32 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      h4("1. Daten"),
-      # Module to upload the file (e.g., CSV)
+      h4("1. Daten & Codebook"),
+      
+      # Upload for Survey Data
       fileInput(inputId = "data_upload", 
-                label = "Datendatei hochladen:", 
+                label = "1. Datendatei hochladen (z.B. Excel):", 
                 accept = c(".csv", ".xlsx", ".rds")),
+      
+      # NEW: Upload for Codebook
+      fileInput(inputId = "codebook_upload", 
+                label = "2. Codebook hochladen (.csv):", 
+                accept = c(".csv")),
       
       # OK Button
       actionButton(inputId = "btn_ok", label = "Daten verarbeiten", class = "btn-primary"),
       
-      hr(), # Horizontal separator line
+      hr(), 
       
       h4("2. Variablen"),
-      # Empty dropdowns at the start (will be populated after clicking OK)
       selectInput(inputId = "var1", label = "1. Variable (Gruppierung/X-Achse):", choices = NULL),
-      selectInput(inputId = "var2", label = "2. Variable (Fokus/Farbe):", choices = NULL)
+      selectInput(inputId = "var2", label = "2. Variable (Fokus/Farbe):", choices = NULL),
+      
+      hr(), 
+      
+      checkboxInput(inputId = "show_share", 
+                    label = "Als Anteile (%) anzeigen", 
+                    value = TRUE)
     ),
     
     mainPanel(
@@ -47,7 +56,9 @@ ui <- fluidPage(
       hr(),
       
       h3("Kreuztabelle"),
-      tableOutput("table_output")
+      tableOutput("table_output"),
+      br(),
+      downloadButton(outputId = "download_table", label = "Tabelle als Excel-CSV exportieren")
     )
   )
 )
@@ -58,81 +69,76 @@ ui <- fluidPage(
 # ==========================================
 server <- function(input, output, session) {
   
-  # Reactive container to store the data and the deck after processing
   rv <- reactiveValues(
     daten = NULL,
     deck = NULL
   )
   
-  # What happens when the user clicks on "Daten verarbeiten" (OK)
+  # Triggered when "Daten verarbeiten" is clicked
   observeEvent(input$btn_ok, {
     
-    # Ensure that the user has actually uploaded a file
-    req(input$data_upload) 
+    # REQUIRE BOTH FILES to be uploaded before proceeding
+    req(input$data_upload, input$codebook_upload) 
     
-    # 1. Load and clean the data using the path of the newly uploaded file
-    # (Make sure that load_data.R contains this function)
-    rv$daten <- load_and_clean_data(input$data_upload$datapath)
+    # 1. Load Codebook from the uploaded file
+    # (fread automatically handles .csv formats very well)
+    cb <- fread(input$codebook_upload$datapath)
     
-    # 2. Create the card deck
-    rv$deck <- create_deck(rv$daten)
+    # 2. Load and clean the survey data, passing the codebook to it
+    rv$daten <- load_and_clean_data(input$data_upload$datapath, cb)
     
-    # 3. Generate the list for the dropdown menus
-    dropdown_choices <- setNames(names(rv$deck), sapply(names(rv$deck), function(code) {
-      
-      # 1. Kategorie-Zahl aus dem Buchstaben generieren (A=0, B=1, C=2, D=3...)
-      # Zieht den 1. Buchstaben (z.B. "C" aus "CC02")
-      first_letter <- substring(code, 1, 1) 
-      cat_num <- match(first_letter, LETTERS) - 1
-      
-      # 2. Fragen-Zahl aus dem Code ziehen (z.B. "02" -> 2)
-      question_num <- as.numeric(substring(code, 3, 4))
-      
-      # 3. Alte Zahlen (wie "3.4" oder "2") aus dem ursprünglichen Label entfernen
-      old_label <- rv$deck[[code]]$label
-      # Regex \b sucht nach eigenständigen Zahlen (mit oder ohne Punkt)
-      clean_label <- gsub("\\b[0-9]+(\\.[0-9]+)?\\b", "", old_label)
-      
-      # 4. Überflüssige Leerzeichen (die durch das Löschen entstehen) entfernen
-      clean_label <- trimws(gsub("\\s+", " ", clean_label))
-      
-      # 5. Neues Label zusammenbauen (z.B. "2.2 Beschwerden")
-      return(paste0(cat_num, ".", question_num, " ", clean_label))
-    }))
+    # 3. Create the card deck 
+    rv$deck <- create_deck(rv$daten, cb, scales)
     
-    # 4. Update the dropdown menus in the UI with the newly generated names
+    # 4. Generate dropdown choices dynamically from the deck
+    # This creates a nice format like: "BB01 - Alter" or "CC02 - Beschwerden 2"
+    dropdown_choices <- setNames(
+      names(rv$deck), 
+      sapply(rv$deck, function(card) paste0(card$name, " - ", card$label))
+    )
+    
+    # 5. Update UI Dropdowns
     updateSelectInput(session, "var1", choices = dropdown_choices)
     
-    # Select the second element by default, if it exists
-    if (length(dropdown_choices) > 1) {
-      updateSelectInput(session, "var2", choices = dropdown_choices, selected = dropdown_choices[2])
-    } else {
-      updateSelectInput(session, "var2", choices = dropdown_choices)
-    }
+    choices_var2 <- c("Keine Auswahl (Univariat)" = "none", dropdown_choices)
+    updateSelectInput(session, "var2", choices = choices_var2, selected = "none")
   })
   
   
   # Output: Plot
   output$plot_output <- renderPlot({
-    # req() stops execution if data or variables have not been loaded/selected yet
     req(rv$deck, input$var1, input$var2) 
     
     karte1 <- rv$deck[[input$var1]]
-    karte2 <- rv$deck[[input$var2]]
+    karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
-    create_barplot(karte1, karte2, rv$daten)
+    create_barplot(karte1, karte2, rv$daten, share = input$show_share)
   })
   
-  # Output: Table
-  output$table_output <- renderTable({
+  # Reactive Data for Table & Download
+  table_data <- reactive({
     req(rv$deck, input$var1, input$var2)
     
     karte1 <- rv$deck[[input$var1]]
-    karte2 <- rv$deck[[input$var2]]
+    karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
-    create_cross_table(karte1, karte2, rv$daten)
+    create_cross_table(karte1, karte2, rv$daten, share = input$show_share)
+  })
+  
+  # Output: Table Display
+  output$table_output <- renderTable({
+    table_data()
   }, rownames = TRUE)
   
+  # Output: Download Table
+  output$download_table <- downloadHandler(
+    filename = function() {
+      paste0("medicus_auswertung_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv2(table_data(), file, row.names = TRUE)
+    }
+  )
 }
 
 shinyApp(ui = ui, server = server)

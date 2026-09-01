@@ -1,0 +1,33 @@
+"item";"label";"class";"scale";"breaks"
+"BB01";"Alter";"single";"numeric";"59, 69, 74, 79, Inf"
+"BB02";"Geschlecht";"single";"categorical";NA
+"BB03";"Wohnsituation";"single";"categorical";NA
+"BB04";"Land";"single";"categorical";NA
+"CC01";"Beschwerden 1";"single";"categorical";NA
+"CC02";"Beschwerden 2";"single";"howmuch";NA
+"DD01";"T Prüfen 3.1 F";"single";"freq";NA
+"DD02";"T Infos woher 3.2";"multiple";NA;NA
+"DD03";"T Gesundheitsrisiko 3.3";"single";"intens";NA
+"DD04";"Maßnahmen Ü30 3.4";"multiple";NA;NA
+"EE01";"Pollen Beschwerden";"single";"freq";NA
+"EE02";"P Infos wie häufig";"single";"freq";NA
+"EE03";"P Infos woher";"multiple";NA;NA
+"EE04";"P Infos wie leicht";"single";"intens";NA
+"EE05";"P normaler Tag";"multiple";NA;NA
+"FF05";"L Beschwerden";"single";"freq";NA
+"FF01";"L wie häufig";"single";"freq";NA
+"FF02";"L Infos woher";"multiple";NA;NA
+"FF03";"L Infos wie leicht";"single";"intens";NA
+"FF04";"L Maßnahmen";"multiple";NA;NA
+"GG01";"Wie häufig überlegen";"single";"freq";NA
+"GG02";"am schwierigsten";"multiple";NA;NA
+"HH01";"Wie hilfreich";"single";"helpful";NA
+"HH02";"Welche Art";"multiple";NA;NA
+"HH03";"Erinnerungen";"single";"yesno";NA
+"HH05";"spielerische Aufgaben";"single";"yesno";NA
+"II01";"Was tun";"multiple";NA;NA
+"II02";"Wenn Schutzmaßnahmen";"multiple";NA;NA
+"II03";"Was macht die App angenehm";"single";"categorical";NA
+"II06";"Wohnumfeld";"single";"categorical";NA
+"II05";"Sprache";"single";"categorical";NA
+"II04";"Schulabschluss";"single";"education";NA
