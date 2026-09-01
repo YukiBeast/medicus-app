@@ -92,5 +92,3 @@ load_and_clean_data <- function(file_path, codebook) {
   med[, MISSING := NULL]
   return(med)
 }
-
-med <- load_and_clean_data("data/raw/data_medicus-app_2026-08-11.xlsx", cb) 
