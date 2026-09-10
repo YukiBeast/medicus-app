@@ -83,5 +83,5 @@ generate_nice_labels <- function(breaks) {
 # 
 # extract(initial_deck$BB01, med)  # numeric (Alter)
 # extract(initial_deck$BB02, med)
-extract(initial_deck$DD02, med)  # multiple choice
+# extract(initial_deck$DD02, med)  # multiple choice
 
