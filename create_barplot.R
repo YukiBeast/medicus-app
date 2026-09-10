@@ -15,9 +15,10 @@ create_barplot <- function(item1, item2, data, share) {
     return(
       summary_data %>%
         ggplot(aes(x = answer, y = plot_val)) +
-        geom_col(fill = "#6D8D5A", col = "black") + # Feste Farbe passend zum EarthKingdom-Theme
+        geom_col(fill = "#6D8D5A") + # Feste Farbe passend zum EarthKingdom-Theme
         labs(x = paste0("Frage: ", sub("[0-9].[0-9]", "", item1$label)),
              y = ifelse(share, "Anteil", "Anzahl")) +
+        scale_fill_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
         theme_minimal(base_size = 22) +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
     )
@@ -42,15 +43,23 @@ create_barplot <- function(item1, item2, data, share) {
       mutate(plot_val = n)
   }
   
+  colors <- colorRampPalette(paletteer::paletteer_d("palettetown::deoxys"))(length(levels(summary_data$i.answer)))
+  
   summary_data %>%
     ggplot(aes(x = answer, y = plot_val, fill = i.answer)) +
-    geom_col(position = "dodge", col = "black") +
+    geom_col(position = position_dodge(preserve = "single")) +
     labs(x = paste0("Frage 1: ", sub("[0-9].[0-9]", "", item1$label)),
          y = ifelse(share, "Anteil", "Anzahl"),
          fill = paste0("Frage 2: ", sub("[0-9].[0-9]", "", item2$label))) +
     theme_minimal(base_size = 22) +
-    scale_fill_paletteer_d("tvthemes::EarthKingdom") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+    scale_fill_manual(
+      values = colors, 
+      drop = FALSE, 
+      labels = function(x) stringr::str_wrap(x, width = 45)
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = "bottom") +
+    guides(fill = guide_legend(ncol = 2, title.position = "left"))
     
 }
 

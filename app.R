@@ -54,7 +54,10 @@ ui <- fluidPage(
     
     mainPanel(
       h3("Visualisierung"),
-      plotOutput("plot_output"),
+      plotOutput("plot_output", height = "650px"),
+      br(),
+      # In your UI code:
+      downloadButton("download_plot_btn", "Plot als PDF herunterladen"),
       
       hr(),
       
@@ -109,14 +112,40 @@ server <- function(input, output, session) {
   
   
   # Output: Plot
-  output$plot_output <- renderPlot({
+  # 1. Store the plot in a reactive expression so it can be reused
+  current_plot <- reactive({
     req(rv$deck, input$var1, input$var2) 
     
     karte1 <- rv$deck[[input$var1]]
     karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
+    # Return the ggplot object
     create_barplot(karte1, karte2, rv$daten, share = input$show_share)
   })
+  
+  # 2. Render the plot for the UI
+  output$plot_output <- renderPlot({
+    current_plot()
+  })
+  
+  # 3. Handle the PDF download
+  output$download_plot_btn <- downloadHandler(
+    filename = function() {
+      # Dynamically generate a file name with today's date
+      paste0("medicus_plot_", Sys.Date(), ".pdf")
+    },
+    content = function(file) {
+      # Save the reactive plot to the temporary 'file' path
+      ggsave(
+        filename = file, 
+        plot = current_plot(), 
+        device = "pdf", 
+        width = 12,   # Adjust width in inches
+        height = 8,   # Adjust height in inches
+        units = "in"
+      )
+    }
+  )
   
   # Reactive Data for Table & Download
   table_data <- reactive({
@@ -136,7 +165,7 @@ server <- function(input, output, session) {
   # Output: Download Table
   output$download_table <- downloadHandler(
     filename = function() {
-      paste0("medicus_auswertung_", Sys.Date(), ".csv")
+      paste0("medicus_table_", Sys.Date(), ".csv")
     },
     content = function(file) {
       write.csv2(table_data(), file, row.names = TRUE)

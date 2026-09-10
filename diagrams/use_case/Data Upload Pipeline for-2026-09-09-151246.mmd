@@ -1,0 +1,32 @@
+---
+config:
+  theme: mc
+  look: neo
+  fontFamily: '''Open Sans Variable'', sans-serif'
+  themeVariables:
+    fontFamily: '''Open Sans Variable'', sans-serif'
+  layout: fixed
+---
+flowchart TB
+ subgraph Tier1["1. Data Layer"]
+        D("Raw Survey Data")
+        C("Codebook")
+        S("Scale Rules")
+  end
+ subgraph Tier2["2. Backend Engine"]
+        CD("Data Cleaning & Setup")
+        EM("Data Aggregation")
+  end
+ subgraph Tier3["3. Frontend Interface"]
+        DD("Interactive Menus")
+        OUT("Visual Charts & Tables")
+        EX("Export Charts & Tables")
+  end
+    D == User's input ==> CD
+    C -- User's input --> CD
+    S -- Predefined --> CD
+    CD ==> DD
+    DD == User's Selection ==> EM
+    CD -. Supplies Clean Data .-> EM
+    EM ==> OUT
+    OUT ==> EX

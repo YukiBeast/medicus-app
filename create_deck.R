@@ -85,4 +85,4 @@ scales <- list(
   
 )
 
-# initial_deck <- create_deck(med, cb, scales)
+# initial_deck <- create_deck(med, medicus_codebook, scales)

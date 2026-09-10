@@ -1,0 +1,38 @@
+---
+config:
+  theme: mc
+---
+classDiagram
+    direction TB
+    class Deck {
+        +cards: list
+        +create_deck(data, cb) list
+    }
+    class VariableCard {
+        <<S3 Base Class>>
+        +id: string
+        +label: string
+        +extract(data) data.frame
+    }
+    class SingleChoice {
+        +levels: character
+        +extract(data) data.frame
+    }
+
+    class MultipleChoice {
+        +prefix: string
+        +extract(data) data.frame
+    }
+
+    class Ordinal {
+        +scale_levels: character
+    }
+    
+    class Numeric {
+        +cuts: numeric
+    }
+    Deck "1" *-- "*" VariableCard : contains
+    VariableCard <|-- SingleChoice
+    VariableCard <|-- MultipleChoice
+    SingleChoice <|-- Ordinal
+    SingleChoice <|-- Numeric

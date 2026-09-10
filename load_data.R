@@ -7,6 +7,7 @@ load_and_clean_data <- function(file_path, codebook) {
   # 1. Load the file
   raw <- read_excel(file_path)
   raw <- as.data.table(raw)
+  codebook <- as.data.table(codebook)
   
   # 2. Dynamic column filter (Keep only relevant metadata and survey items)
   valid_cols <- grep("^(CASE|MISSING|[A-Z]{2}[0-9]{2})", names(raw), value = TRUE)
@@ -92,3 +93,8 @@ load_and_clean_data <- function(file_path, codebook) {
   med[, MISSING := NULL]
   return(med)
 }
+
+# library(readxl)
+# medicus <- read_excel("data/raw/data_medicus-app_2026-08-11.xlsx")
+# medicus_codebook <- read_excel("data/medicus_codebook.xlsx")
+# med <- load_and_clean_data("data/raw/data_medicus-app_2026-08-11.xlsx", medicus_codebook)
