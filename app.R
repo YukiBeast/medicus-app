@@ -5,6 +5,13 @@ library(readxl)
 library(labelled)
 library(dplyr)
 
+# Workaround for Chromium Issue 468227 in Shinylive
+downloadButton <- function(...) {
+  tag <- shiny::downloadButton(...)
+  tag$attribs$download <- NULL
+  tag
+}
+
 # ==========================================
 # 1. GLOBAL SETUP
 # ==========================================
