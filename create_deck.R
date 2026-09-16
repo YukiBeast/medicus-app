@@ -49,40 +49,32 @@ create_deck <- function(data, codebook, scales) {
 }
 
 scales <- list(
-  freq = c("(fast) nie",
-           "selten",
-           "manchmal",
-           "oft",
-           "(fast) immer"),
+  # --- GERMAN SCALES ---
+  freq = c("(fast) nie", "selten", "manchmal", "oft", "(fast) immer"),
+  intens = c("sehr leicht", "leicht", "neutral", "schwierig", "sehr schwierig"),
+  howmuch = c("Ich kann es nicht beurteilen", "wenig", "mittelmäßig", "ziemlich", "sehr"),
+  helpful = c("überhaupt nicht hilfreich", "wenig hilfreich", "neutral", "hilfreich", "sehr hilfreich"),
+  yesno = c("nein", "eher nein", "unsicher", "eher ja", "ja, auf jeden Fall"),
+  education = c("Andere / keine Angabe", "Hauptschulabschluss /\n Volksschulabschluss", "Mittlere Reife (Realschule)", "(Fach-)Abitur"),
   
-  intens = c("sehr leicht",
-             "leicht",
-             "neutral",
-             "schwierig"
-  ),
+  # --- ENGLISH SCALES ---
+  freq_en = c("(nearly) never", "rarely", "sometimes", "often", "(nearly) always"),
   
-  howmuch = c("Ich kann es nicht beurteilen",
-              "wenig",
-              "mittelmäßig",
-              "ziemlich",
-              "sehr"),
-  helpful = c("überhaupt nicht hilfreich",
-              "wenig hilfreich",
-              "neutral",
-              "hilfreich",
-              "sehr hilfreich"),
+  intens_en = c("very easy", "easy", "neutral", "difficult", "very difficult"),
   
-  yesno = c("nein",
-            "eher nein",
-            "unsicher",
-            "eher ja",
-            "ja, auf jeden Fall"),
+  # Note: Adjusted order to match the German structure (I'm not sure first)
+  howmuch_en = c("I’m not sure / I cannot assess this.", "not at all", "slightly", "moderately", "quite a lot", "very much"),
   
-  education = c("Andere / keine Angabe",
-                "Hauptschulabschluss /\n Volksschulabschluss",
-                "Mittlere Reife (Realschule)",
-                "(Fach-)Abitur")
+  helpful_en = c("not helpful at all", "not very helpful", "neutral", "helpful", "very helpful"),
   
-)
+  yesno_en = c("no", "rather no", "unsure", "rather yes", "yes, definitely"),
+  
+  # I added a standard English equivalent for education just in case!
+  education_en = c(
+    "other / prefer not to say",
+    "lower secondary school",
+    "intermediate secondary school",
+    "upper secondary school / university entrance qualification ((Fach-)Abitur)"
+  ))
 
 # initial_deck <- create_deck(med, medicus_codebook, scales)
