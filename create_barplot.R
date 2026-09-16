@@ -1,5 +1,10 @@
-create_barplot <- function(item1, item2, data, share) {
+create_barplot <- function(item1, item2, data, share, language = "EN") {
   library(dplyr)
+  
+  question_label <- ifelse(language == "EN", "Question", "Frage")
+  share_label <- ifelse(language == "EN", "Share", "Anteil")
+  count_label <- ifelse(language == "EN", "Count", "Anzahl")
+  
   dt1 <- extract(item1, data)
   
   # If-Case: only display 1 variable.
@@ -17,8 +22,8 @@ create_barplot <- function(item1, item2, data, share) {
         filter(!is.na(answer)) %>%
         ggplot(aes(x = answer, y = plot_val)) +
         geom_col(fill = "#6D8D5A") + # Feste Farbe passend zum EarthKingdom-Theme
-        labs(x = paste0("Frage: ", sub("[0-9].[0-9]", "", item1$label)),
-             y = ifelse(share, "Anteil", "Anzahl")) +
+        labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
+             y = ifelse(share, share_label, count_label)) +
         scale_fill_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
         theme_minimal(base_size = 22) +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -50,9 +55,9 @@ create_barplot <- function(item1, item2, data, share) {
     filter(!is.na(answer) & !is.na(i.answer)) %>%
     ggplot(aes(x = answer, y = plot_val, fill = i.answer)) +
     geom_col(position = position_dodge(preserve = "single")) +
-    labs(x = paste0("Frage 1: ", sub("[0-9].[0-9]", "", item1$label)),
-         y = ifelse(share, "Anteil", "Anzahl"),
-         fill = paste0("Frage 2: ", sub("[0-9].[0-9]", "", item2$label))) +
+    labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
+         y = ifelse(share, share_label, count_label),
+         fill = paste0(question_label, " 2: ", sub("[0-9].[0-9]", "", item2$label))) +
     theme_minimal(base_size = 22) +
     scale_fill_manual(
       values = colors, 

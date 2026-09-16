@@ -174,7 +174,9 @@ server <- function(input, output, session) {
     karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
     # Base Plot
-    p <- create_barplot(karte1, karte2, rv$daten, share = input$show_share)
+    p <- create_barplot(karte1, karte2, rv$daten,
+                        share = input$show_share,
+                        language = input$lang)
     
     # Remove legend if checkbox is unticked
     if (!input$show_legend) {
