@@ -8,7 +8,7 @@ create_cross_table <- function(item1, item2 = NULL, data, share = TRUE) {
   # 1. UNIVARIATER FALL
   # =======================================
   if (is.null(item2) || (is.character(item2) && item2 == "none")) {
-    tbl <- tbl <- as.data.frame(table(dt1$answer, useNA = "ifany"))
+    tbl <- tbl <- as.data.frame(table(dt1$answer, useNA = "ifany"), check.names = FALSE)
     
     if (share) {
       # Berechne Prozente und formatiere sie mit "%" Zeichen
@@ -35,15 +35,22 @@ create_cross_table <- function(item1, item2 = NULL, data, share = TRUE) {
   # Basis-Kreuztabelle
   tbl <- table(forplot$answer, forplot$i.answer, useNA = "ifany")
   
+  if (any(is.na(rownames(tbl)))) {
+    rownames(tbl)[is.na(rownames(tbl))] <- "NA"
+  }
+  if (any(is.na(colnames(tbl)))) {
+    colnames(tbl)[is.na(colnames(tbl))] <- "NA"
+  }
+  
   if (share) {
     # Zeilenprozente berechnen (margin = 1) - passend zu deinem Plot!
     tbl <- prop.table(tbl, margin = 1) * 100
-    tbl_df <- as.data.frame.matrix(tbl)
+    tbl_df <- as.data.frame.matrix(tbl, make.names = FALSE)
     
     # Alle Spalten mit "%" formatieren
     tbl_df[] <- lapply(tbl_df, function(x) sprintf("%.1f %%", x))
   } else {
-    tbl_df <- as.data.frame.matrix(tbl)
+    tbl_df <- as.data.frame.matrix(tbl, make.names = FALSE)
     # Alle Spalten als Ganzzahlen formatieren
     tbl_df[] <- lapply(tbl_df, as.integer)
   }

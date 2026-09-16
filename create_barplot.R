@@ -14,6 +14,7 @@ create_barplot <- function(item1, item2, data, share) {
     
     return(
       summary_data %>%
+        filter(!is.na(answer)) %>%
         ggplot(aes(x = answer, y = plot_val)) +
         geom_col(fill = "#6D8D5A") + # Feste Farbe passend zum EarthKingdom-Theme
         labs(x = paste0("Frage: ", sub("[0-9].[0-9]", "", item1$label)),
@@ -46,6 +47,7 @@ create_barplot <- function(item1, item2, data, share) {
   colors <- colorRampPalette(paletteer::paletteer_d("palettetown::deoxys"))(length(levels(summary_data$i.answer)))
   
   summary_data %>%
+    filter(!is.na(answer) & !is.na(i.answer)) %>%
     ggplot(aes(x = answer, y = plot_val, fill = i.answer)) +
     geom_col(position = position_dodge(preserve = "single")) +
     labs(x = paste0("Frage 1: ", sub("[0-9].[0-9]", "", item1$label)),
@@ -59,7 +61,7 @@ create_barplot <- function(item1, item2, data, share) {
     ) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "bottom") +
-    guides(fill = guide_legend(ncol = 2, title.position = "left"))
+    guides(fill = guide_legend(ncol = 1, title.position = "left"))
     
 }
 

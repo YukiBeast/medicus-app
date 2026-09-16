@@ -22,7 +22,7 @@ extract.multiple_choice <- function(item, data) {
               variable.name = "answer", variable.factor = FALSE)
   all_answers <- unique(assign_labels(res$answer, data = data))
   # Filtert nur die echten Auswahlen und behält ID + Name der Option
-  res <- res[value == "ausgewählt", .(id = CASE, answer = factor(assign_labels(answer, data = data),
+  res <- res[value %in% c("ausgewählt", "selected"), .(id = CASE, answer = factor(assign_labels(answer, data = data),
                                                                  levels = all_answers))]
   
   return(res)

@@ -4,6 +4,7 @@ library(ggplot2)
 library(readxl)
 library(labelled)
 library(dplyr)
+library(plotly)
 
 # Workaround for Chromium Issue 468227 in Shinylive
 downloadButton <- function(...) {
@@ -56,17 +57,18 @@ ui <- fluidPage(
       
       checkboxInput(inputId = "show_share", 
                     label = "Als Anteile (%) anzeigen", 
+                    value = TRUE),
+      checkboxInput(inputId = "show_legend", 
+                    label = "Legende anzeigen", 
                     value = TRUE)
     ),
     
     mainPanel(
       h3("Visualisierung"),
-      plotOutput("plot_output", height = "650px"),
-      br(),
-      # In your UI code:
-      downloadButton("download_plot_btn", "Plot als PDF herunterladen"),
-      
+      plotlyOutput("plot_output", height = "650px"),
+
       hr(),
+
       
       h3("Kreuztabelle"),
       tableOutput("table_output"),
@@ -126,33 +128,61 @@ server <- function(input, output, session) {
     karte1 <- rv$deck[[input$var1]]
     karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
-    # Return the ggplot object
-    create_barplot(karte1, karte2, rv$daten, share = input$show_share)
+    # Basis-Plot create
+    p <- create_barplot(karte1, karte2, rv$daten, share = input$show_share)
+    
+    # Legend remove, if Checkbox is NICHT
+    if (!input$show_legend) {
+      p <- p + theme(legend.position = "none",
+                     plot.margin = margin(t = 10, r = 150, b = 10, l = 10),
+                     legend.text = element_text(size = 8),
+                     legend.title = element_text(size = 10),  # <-- Hier anpassen für das PDF
+                     legend.key.size = unit(0.5, "cm"))
+    }
+    
+    return(p)
   })
   
   # 2. Render the plot for the UI
-  output$plot_output <- renderPlot({
-    current_plot()
+  output$plot_output <- renderPlotly({
+    p <- current_plot() 
+    ply <- ggplotly(p)
+    
+    # \n durch <br> ersetzen
+    for (i in seq_along(ply$x$data)) {
+      if (!is.null(ply$x$data[[i]]$name)) {
+        ply$x$data[[i]]$name <- gsub("\n", "<br>", ply$x$data[[i]]$name)
+      }
+    }
+    
+    ply %>%
+      layout(
+        # 1. Provide a fixed minimum margin just for the legend
+        margin = list(b = 120), 
+        
+        legend = list(
+          orientation = "h",
+          yref = "container",         # <-- MAGIC 1: Pin legend to the main window, not the plot
+          y = 0,                      # <-- MAGIC 2: Put it at the absolute bottom (0)
+          yanchor = "bottom",         # <-- MAGIC 3: Anchor it from its own bottom edge
+          x = 0,                    
+          xanchor = "left",          
+          font = list(size = 12),
+          title = list(
+            side = "top",             
+            font = list(size = 14)
+          )
+        ),
+        xaxis = list(
+          fixedrange = TRUE,
+          automargin = TRUE           # <-- MAGIC 4: Auto-shrinks the bars if labels are long!
+        ),
+        yaxis = list(fixedrange = TRUE)
+      ) %>%
+      config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "pan2d", "zoom2d", "autoScale2d"),
+             displaylogo = FALSE)
   })
   
-  # 3. Handle the PDF download
-  output$download_plot_btn <- downloadHandler(
-    filename = function() {
-      # Dynamically generate a file name with today's date
-      paste0("medicus_plot_", Sys.Date(), ".pdf")
-    },
-    content = function(file) {
-      # Save the reactive plot to the temporary 'file' path
-      ggsave(
-        filename = file, 
-        plot = current_plot(), 
-        device = "pdf", 
-        width = 12,   # Adjust width in inches
-        height = 8,   # Adjust height in inches
-        units = "in"
-      )
-    }
-  )
   
   # Reactive Data for Table & Download
   table_data <- reactive({
