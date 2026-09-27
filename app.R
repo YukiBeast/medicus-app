@@ -5,6 +5,7 @@ library(readxl)
 library(labelled)
 library(dplyr)
 library(plotly)
+library(bslib)
 
 # Workaround for Chromium Issue 468227 in Shinylive
 downloadButton <- function(...) {
@@ -49,6 +50,8 @@ dict <- list(
 # 2. USER INTERFACE (UI)
 # ==========================================
 ui <- fluidPage(
+  theme = bs_theme(bootswatch = "lux",
+                   primary = "#66CC99"), # "flatly" and "minty" are also great, clean options
   
   # Language Switcher placed at the very top
   br(),
@@ -87,7 +90,7 @@ server <- function(input, output, session) {
   output$app_body <- renderUI({
     
     # We build the layout inside renderUI so we can inject the translated texts
-    fluidPage(
+    tagList(                   # <--- USE TAGLIST INSTEAD
       titlePanel(tr("title")),
       
       sidebarLayout(
@@ -102,7 +105,9 @@ server <- function(input, output, session) {
                     label = tr("upload_cb"), 
                     accept = c(".csv")),
           
-          actionButton(inputId = "btn_ok", label = tr("btn_ok"), class = "btn-primary"),
+          actionButton(inputId = "btn_ok", label = tr("btn_ok"), class = "btn-primary",
+                       width = "100%",
+                       style = "color: white;"),
           
           hr(), 
           
@@ -138,15 +143,23 @@ server <- function(input, output, session) {
         ),
         
         mainPanel(
-          h3(tr("viz")),
-          plotlyOutput("plot_output", height = "650px"),
+          # Plot Card
+          bslib::card(
+            bslib::card_header(class = "bg-primary text-white", h4(tr("viz"), style = "margin: 0;")),
+            bslib::card_body(plotlyOutput("plot_output", height = "650px"))
+          ),
           
-          hr(),
-          
-          h3(tr("cross_table")),
-          tableOutput("table_output"),
           br(),
-          downloadButton(outputId = "download_table", label = tr("download_tbl"))
+          
+          # Table Card
+          bslib::card(
+            bslib::card_header(class = "bg-primary text-white", h4(tr("cross_table"), style = "margin: 0;")),
+            bslib::card_body(
+              tableOutput("table_output"),
+              br(),
+              downloadButton(outputId = "download_table", label = tr("download_tbl"), class = "btn-outline-primary")
+            )
+          )
         )
       )
     )
@@ -265,12 +278,22 @@ server <- function(input, output, session) {
     karte1 <- rv$deck[[input$var1]]
     karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
-    create_cross_table(karte1, karte2, rv$daten, share = input$show_share)
+    df <- create_cross_table(karte1, karte2, rv$daten, share = input$show_share,
+                       language = input$lang)
+    
+    # If bivariate, convert row names to a real column with a translated header
+    if (input$var2 != "none") {
+      col_label <- if (input$lang == "EN") "Category" else "Kategorie"
+      df <- data.frame(Category = rownames(df), df, check.names = FALSE)
+      names(df)[1] <- col_label
+    }
+    
+    return(df)
   })
   
   output$table_output <- renderTable({
     table_data()
-  }, rownames = TRUE)
+  }, rownames = FALSE, striped = TRUE, hover = TRUE, bordered = TRUE, width = "100%", align = "c")
   
   output$download_table <- downloadHandler(
     filename = function() {

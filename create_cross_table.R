@@ -1,5 +1,8 @@
-create_cross_table <- function(item1, item2 = NULL, data, share = TRUE) {
+create_cross_table <- function(item1, item2 = NULL, data, share = TRUE, language = "EN") {
   dt1 <- extract(item1, data)
+  
+  share_label <- ifelse(language == "EN", "Share", "Anteil")
+  count_label <- ifelse(language == "EN", "Count", "Anzahl")
   
   # Das saubere Label der ersten Frage für die Spaltenbeschriftung
   label1 <- sub("[0-9]+\\.[0-9]+\\s?", "", item1$label)
@@ -14,11 +17,11 @@ create_cross_table <- function(item1, item2 = NULL, data, share = TRUE) {
       # Berechne Prozente und formatiere sie mit "%" Zeichen
       tbl$Freq <- (tbl$Freq / sum(tbl$Freq)) * 100
       tbl$Freq <- sprintf("%.1f %%", tbl$Freq)
-      col2_name <- "Anteil"
+      col2_name <- share_label
     } else {
       # Als Ganzzahl erzwingen (verhindert Kommastellen bei Anzahlen)
       tbl$Freq <- as.integer(tbl$Freq)
-      col2_name <- "Anzahl"
+      col2_name <- count_label
     }
     
     # Spalten schön benennen!

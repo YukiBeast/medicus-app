@@ -29,6 +29,8 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
     NULL
   }
   
+
+  
   dt1 <- extract(item1, data)
   
   # If-Case: only display 1 variable.
@@ -45,12 +47,14 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
       summary_data %>%
         filter(!is.na(answer)) %>%
         ggplot(aes(x = answer, y = plot_val)) +
-        geom_col(fill = "#6D8D5A") + # Feste Farbe passend zum EarthKingdom-Theme
+        geom_col(fill = "#66CC99") + # Feste Farbe passend zum EarthKingdom-Theme
         labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
              y = ifelse(share, share_label, count_label)) +
         scale_fill_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
-        theme_minimal(base_size = 22) +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        theme_minimal(base_size = 18) +
+        theme(axis.title.y = element_text(margin = margin(r = 15)), # Adds a 15px gap to the right of the title
+              panel.grid.major.x = element_blank(),
+              axis.text.x = element_text(angle = 45, hjust = 1)) +
         y_scale
       )
   }
@@ -74,7 +78,26 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
       mutate(plot_val = n)
   }
   
-  colors <- colorRampPalette(paletteer::paletteer_d("palettetown::deoxys"))(length(levels(summary_data$i.answer)))
+  # We use the length of factors levels to set the required number of colors
+  num_levels <- length(levels(summary_data$i.answer))
+  
+  # Check if the item's class represents ordered/numeric data
+  if (any(class(item2) %in% c("ordinal", "numeric"))) {
+    
+    # Sequential palette for scales with natural order
+    colors <- colorRampPalette(paletteer::paletteer_d("MoMAColors::Ernst"))(num_levels)
+    
+    # Check if the item's class represents unordered/categorical data
+  } else if (any(class(item2) %in% c("single_choice", "categorical", "nominal"))) {
+    
+    # Distinct, qualitative palette for categories without inherent order
+    colors <- colorRampPalette(paletteer::paletteer_d("palettetown::vibrava"))(num_levels)
+    
+  } else {
+    
+    # Fallback default if class isn't defined or recognized
+    colors <- colorRampPalette(paletteer::paletteer_d("palettetown::deoxys"))(num_levels)
+  }
   
   summary_data %>%
     filter(!is.na(answer) & !is.na(i.answer)) %>%
@@ -84,13 +107,16 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
     labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
          y = ifelse(share, share_label, count_label),
          fill = paste0(question_label, " 2: ", sub("[0-9].[0-9]", "", item2$label))) +
-    theme_minimal(base_size = 22) +
+    theme_minimal(base_size = 18) +
     scale_fill_manual(
       values = colors, 
       drop = FALSE, 
       labels = function(x) stringr::str_wrap(x, width = 45)
     ) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    theme(
+      axis.title.y = element_text(margin = margin(r = 15)), # Adds a 15px gap to the right of the title
+      panel.grid.major.x = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "bottom") +
     guides(fill = guide_legend(ncol = 1, title.position = "left")) +
     y_scale
