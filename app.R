@@ -38,7 +38,11 @@ dict <- list(
   "viz"          = c(DE = "Visualisierung",                        EN = "Visualization"),
   "cross_table"  = c(DE = "Kreuztabelle",                          EN = "Cross Table"),
   "download_tbl" = c(DE = "Tabelle als Excel-CSV exportieren",     EN = "Export table as Excel-CSV"),
-  "none_sel"     = c(DE = "Keine Auswahl (Univariat)",             EN = "No Selection (Univariate)")
+  "none_sel"     = c(DE = "Keine Auswahl (Univariat)",             EN = "No Selection (Univariate)"),
+  "bar_type"    = c(DE = "Darstellung:",         EN = "Layout:"),
+  "opt_dodge"   = c(DE = "Nebeneinander",        EN = "Side-by-Side"),
+  "opt_stack"   = c(DE = "Gestapelt",            EN = "Stacked"),
+  "fix_y" = c(DE = "Y-Achse auf 0-1 fixieren", EN = "Fix Y-axis to 0-1")
 )
 
 # ==========================================
@@ -111,9 +115,26 @@ server <- function(input, output, session) {
           checkboxInput(inputId = "show_share", 
                         label = tr("show_share"), 
                         value = TRUE),
+          
+           # Appears only when share is checked
+          conditionalPanel(
+            condition = "input.show_share == true",
+            checkboxInput(inputId = "fix_y", 
+                          label = tr("fix_y"), 
+                          value = FALSE)
+          ),
+          
           checkboxInput(inputId = "show_legend", 
                         label = tr("show_legend"), 
-                        value = TRUE)
+                        value = TRUE),
+          radioButtons(
+            inputId = "bar_pos",
+            label = tr("bar_type"),
+            choiceNames = list(tr("opt_dodge"), tr("opt_stack")),
+            choiceValues = list("dodge", "stack"),
+            selected = "dodge",
+            inline = TRUE
+          )
         ),
         
         mainPanel(
@@ -174,9 +195,13 @@ server <- function(input, output, session) {
     karte2 <- if (input$var2 == "none") "none" else rv$deck[[input$var2]]
     
     # Base Plot
-    p <- create_barplot(karte1, karte2, rv$daten,
+    p <- create_barplot(karte1,
+                        karte2,
+                        rv$daten,
                         share = input$show_share,
-                        language = input$lang)
+                        language = input$lang,
+                        bar_pos = input$bar_pos,
+                        fix_y = isTRUE(input$fix_y))
     
     # Remove legend if checkbox is unticked
     if (!input$show_legend) {
@@ -225,8 +250,10 @@ server <- function(input, output, session) {
         ),
         yaxis = list(fixedrange = TRUE)
       ) %>%
-      config(modeBarButtonsToRemove = c("zoomIn2d", "zoomOut2d", "pan2d", "zoom2d", "autoScale2d"),
-             displaylogo = FALSE)
+      config(
+        modeBarButtons = list(list("toImage")),
+        displaylogo = FALSE
+      )
   })
   
   # ---------------------------------------------------------

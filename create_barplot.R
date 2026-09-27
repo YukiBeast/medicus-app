@@ -1,9 +1,33 @@
-create_barplot <- function(item1, item2, data, share, language = "EN") {
+create_barplot <- function(item1, item2, data, share, language = "EN",
+                           bar_pos = "dodge",
+                           fix_y = FALSE) {
   library(dplyr)
   
   question_label <- ifelse(language == "EN", "Question", "Frage")
   share_label <- ifelse(language == "EN", "Share", "Anteil")
   count_label <- ifelse(language == "EN", "Count", "Anzahl")
+  
+  # Determine position adjustment
+  col_position <- if (bar_pos == "stack") {
+    position_stack(reverse = TRUE) # Keeps ordinal levels in intuitive top-to-bottom order
+  } else {
+    position_dodge(preserve = "single")
+  }
+  
+  # Helper function to force integer breaks on the Y-axis
+  int_breaks <- function(x) {
+    b <- pretty(x)
+    b[b %% 1 == 0]
+  }
+  
+  # Dynamic Y-axis scale block
+  y_scale <- if (!share) {
+    scale_y_continuous(breaks = int_breaks)
+  } else if (share && fix_y) {
+    scale_y_continuous(limits = c(0, 1))
+  } else {
+    NULL
+  }
   
   dt1 <- extract(item1, data)
   
@@ -26,8 +50,9 @@ create_barplot <- function(item1, item2, data, share, language = "EN") {
              y = ifelse(share, share_label, count_label)) +
         scale_fill_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
         theme_minimal(base_size = 22) +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    )
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        y_scale
+      )
   }
   
   dt2 <- extract(item2, data)
@@ -38,12 +63,12 @@ create_barplot <- function(item1, item2, data, share, language = "EN") {
   library(paletteer)
   
   summary_data <- forplot %>%
-    count(answer, i.answer)
+    count(answer, i.answer, .drop = FALSE)
   
-  # 2. Bedingung: Anteil vs. absolute Anzahl
   if (share) {
+    # FIX: Use a standard if/else instead of ifelse() to prevent vector truncation
     summary_data <- summary_data %>% 
-      mutate(plot_val = n / sum(n), .by = answer)
+      mutate(plot_val = if (sum(n) == 0) 0 else n / sum(n), .by = answer)
   } else {
     summary_data <- summary_data %>% 
       mutate(plot_val = n)
@@ -54,7 +79,8 @@ create_barplot <- function(item1, item2, data, share, language = "EN") {
   summary_data %>%
     filter(!is.na(answer) & !is.na(i.answer)) %>%
     ggplot(aes(x = answer, y = plot_val, fill = i.answer)) +
-    geom_col(position = position_dodge(preserve = "single")) +
+    geom_col(position = col_position) +
+    scale_x_discrete(drop = FALSE) +
     labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
          y = ifelse(share, share_label, count_label),
          fill = paste0(question_label, " 2: ", sub("[0-9].[0-9]", "", item2$label))) +
@@ -66,8 +92,8 @@ create_barplot <- function(item1, item2, data, share, language = "EN") {
     ) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           legend.position = "bottom") +
-    guides(fill = guide_legend(ncol = 1, title.position = "left"))
-    
+    guides(fill = guide_legend(ncol = 1, title.position = "left")) +
+    y_scale
 }
 
 # create_barplot(item1, item2, med)
