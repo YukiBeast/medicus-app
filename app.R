@@ -6,6 +6,8 @@ library(labelled)
 library(dplyr)
 library(plotly)
 library(bslib)
+library(shinycssloaders)
+
 
 # Workaround for Chromium Issue 468227 in Shinylive
 downloadButton <- function(...) {
@@ -43,8 +45,11 @@ dict <- list(
   "bar_type"    = c(DE = "Darstellung:",         EN = "Layout:"),
   "opt_dodge"   = c(DE = "Nebeneinander",        EN = "Side-by-Side"),
   "opt_stack"   = c(DE = "Gestapelt",            EN = "Stacked"),
-  "fix_y" = c(DE = "Y-Achse auf 0-1 fixieren", EN = "Fix Y-axis to 0-1")
-)
+  "fix_y" = c(DE = "Y-Achse auf 0-1 fixieren", EN = "Fix Y-axis to 0-1"),
+  "welcome" = c(DE = "Bitte laden Sie Ihre Daten und das Codebook hoch und klicken Sie auf 'Daten verarbeiten'.", 
+                EN = "Please upload your data and codebook, then click 'Process Data' to begin."),
+  "kpi_n" = c(DE = "Gültige Teilnehmer gesamt", EN = "Vallid Total Respondents")
+  )
 
 # ==========================================
 # 2. USER INTERFACE (UI)
@@ -143,10 +148,15 @@ server <- function(input, output, session) {
         ),
         
         mainPanel(
+          # Placeholder for the KPI boxes
+          uiOutput("kpi_boxes"),
+          br(),
+          
           # Plot Card
           bslib::card(
             bslib::card_header(class = "bg-primary text-white", h4(tr("viz"), style = "margin: 0;")),
-            bslib::card_body(plotlyOutput("plot_output", height = "650px"))
+            # UI Side
+            bslib::card_body(withSpinner(plotlyOutput("plot_output", height = "650px"), type = 8, color = "#20c997"))
           ),
           
           br(),
@@ -198,10 +208,61 @@ server <- function(input, output, session) {
     updateSelectInput(session, "var2", choices = choices_var2, selected = "none")
   })
   
+  output$kpi_boxes <- renderUI({
+    req(rv$daten, input$var1, rv$deck)
+    
+    # 1. Total Active Respondents
+    total_n <- nrow(rv$daten)
+    
+    # Extract data for Variable 1
+    karte1 <- rv$deck[[input$var1]]
+    dt1 <- extract(karte1, rv$daten)
+    
+    # 2. Dynamic Valid Responses Calculation
+    if (is.null(input$var2) || input$var2 == "none") {
+      # Univariate case: Count UNIQUE IDs that have a valid answer
+      valid_n <- length(unique(dt1$id[!is.na(dt1$answer)]))
+      box_title <- if (input$lang == "EN") "Valid answers to this question:" else "Gültige Antworten auf diese Frage:"
+      
+    } else {
+      # Bivariate case: Merge data and count UNIQUE IDs that answered BOTH
+      karte2 <- rv$deck[[input$var2]]
+      dt2 <- extract(karte2, rv$daten)
+      forplot <- dt1[dt2, on = "id"]
+      
+      # Filter for rows where both answers are valid, then count unique IDs
+      valid_ids <- forplot$id[!is.na(forplot$answer) & !is.na(forplot$i.answer)]
+      valid_n <- length(unique(valid_ids))
+      box_title <- if (input$lang == "EN") "Valid answers to both questions:" else "Gültige Antworten auf beide Fragen:"
+    }
+    
+    # Format the text to show "N (X%)"
+    valid_pct <- round((valid_n / total_n) * 100, 1)
+    valid_text <- paste0(valid_n, " (", valid_pct, "%)")
+    
+    layout_columns(
+      bslib::value_box(
+        title = tr("kpi_n"), # Assumes "Total Respondents" is in your dict
+        value = format(total_n, big.mark = ","),
+        showcase = icon("users"),
+        theme = "primary"
+      ),
+      bslib::value_box(
+        title = box_title,
+        value = h5(valid_text, style = "margin: 0; font-weight: bold;"),
+        showcase = icon("chart-pie"), 
+        theme = "secondary"
+      )
+    )
+  })
+  
   # ---------------------------------------------------------
   # PLOT LOGIC
   # ---------------------------------------------------------
   current_plot <- reactive({
+    validate(
+      need(rv$deck, tr("welcome"))
+    )
     req(rv$deck, input$var1, input$var2) 
     
     karte1 <- rv$deck[[input$var1]]
@@ -273,6 +334,9 @@ server <- function(input, output, session) {
   # TABLE LOGIC
   # ---------------------------------------------------------
   table_data <- reactive({
+    validate(
+      need(rv$deck, tr("welcome"))
+    )
     req(rv$deck, input$var1, input$var2)
     
     karte1 <- rv$deck[[input$var1]]

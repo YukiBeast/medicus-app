@@ -46,7 +46,8 @@ load_and_clean_data <- function(file_path, codebook) {
   
   if (length(alter_item) == 1 && length(gesch_item) == 1) {
     # get() tells data.table to evaluate the dynamic string as a column name
-    med <- med[MISSING != 100 & get(alter_item) >= 60 & get(gesch_item) != "keine Angabe"]
+    med <- med[MISSING != 100 & get(alter_item) >= 60 & get(gesch_item) %notin% c("keine Angabe",
+                                                                                  "prefer not to say")]
   }
   
   # ==========================================
