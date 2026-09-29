@@ -9,22 +9,25 @@ load_and_clean_data <- function(file_path, codebook) {
   raw <- as.data.table(raw)
   codebook <- as.data.table(codebook)
   
-  # 2. Dynamic column filter (Keep only relevant metadata and survey items)
+  # 2. Dynamic column filter 
   valid_cols <- grep("^(CASE|MISSING|[A-Z]{2}[0-9]{2})", names(raw), value = TRUE)
-  med <- raw[, ..valid_cols] 
+  
+  # FIX 1: Use 'with = FALSE', which is much more stable in Shinylive than '..valid_cols'
+  med <- raw[, valid_cols, with = FALSE] 
   
   # ==========================================
   # 3. DYNAMIC RENAMING (e.g., BB01_01 -> BB01)
   # ==========================================
-  # Find all items that are NOT multiple choice according to the codebook
-  single_items <- codebook[class %in% c("single", "numeric"), item]
+  # FIX 2: Check if columns exist and use base-R subsetting to avoid WASM typo-crashes
+  if ("class" %in% names(codebook) && "item" %in% names(codebook)) {
+    single_items <- codebook$item[codebook$class %in% c("single", "numeric")]
+  } else {
+    single_items <- character(0)
+  }
   
   for (itm in single_items) {
     if (!(itm %in% names(med))) {
-      # Search for a column that starts with the item and has a numeric suffix
       matching_col <- grep(paste0("^", itm, "_[0-9]+$"), names(med), value = TRUE)
-      
-      # If exactly one column is found, rename it to the clean item code
       if (length(matching_col) == 1) {
         setnames(med, matching_col, itm)
       }
@@ -35,35 +38,39 @@ load_and_clean_data <- function(file_path, codebook) {
   labels <- as.list(med[1, ])
   med <- med[-1, ]
   
-  # 5. Convert data types (automatically converts numbers to numeric)
+  # 5. Convert data types
   med <- type.convert(med, as.is = TRUE) 
   
   # ==========================================
   # 6. DYNAMIC FILTERING (Age and dropouts)
   # ==========================================
-  alter_item <- codebook[grepl("Alter", label, ignore.case = TRUE), item]
-  gesch_item <- codebook[grepl("Geschlecht", label, ignore.case = TRUE), item]
+  if ("label" %in% names(codebook) && "item" %in% names(codebook)) {
+    alter_item <- codebook$item[grepl("Alter", codebook$label, ignore.case = TRUE)]
+    gesch_item <- codebook$item[grepl("Geschlecht", codebook$label, ignore.case = TRUE)]
+  } else {
+    alter_item <- character(0)
+    gesch_item <- character(0)
+  }
   
-  if (length(alter_item) == 1 && length(gesch_item) == 1) {
-    # get() tells data.table to evaluate the dynamic string as a column name
-    med <- med[MISSING != 100 & get(alter_item) >= 60 & get(gesch_item) %notin% c("keine Angabe",
-                                                                                  "prefer not to say")]
+  # FIX 3: Ensure MISSING actually exists before filtering
+  if ("MISSING" %in% names(med)) {
+    med <- med[MISSING != 100]
+  }
+  
+  # FIX 4: Replace %notin% with standard base R `!(... %in% ...)`
+  if (length(alter_item) == 1 && length(gesch_item) == 1 && 
+      alter_item %in% names(med) && gesch_item %in% names(med)) {
+    med <- med[get(alter_item) >= 60 & !(get(gesch_item) %in% c("keine Angabe", "prefer not to say"))]
   }
   
   # ==========================================
   # 6.1 DYNAMIC COLUMN REMOVAL (Data Protection)
   # ==========================================
-  # Search for the term in the extracted labels list (returns the index)
   ds_index <- grep("Datenschutzeinwilligung", labels, ignore.case = TRUE)
   
   if (length(ds_index) > 0) {
-    # Get the actual column name(s) (e.g., "AA02")
     ds_cols <- names(labels)[ds_index]
-    
-    # 1. Remove the column from the data.table
     med[, (ds_cols) := NULL]
-    
-    # 2. Remove the item from the labels list so it stays in sync
     labels[ds_cols] <- NULL
   }
   
@@ -73,29 +80,22 @@ load_and_clean_data <- function(file_path, codebook) {
   # ==========================================
   # 8. DYNAMIC STRING CLEANING
   # ==========================================
-  
-  # Fix living environment (Wohnumfeld) strings
-  wohn_item <- codebook[grepl("Wohnumfeld", label, ignore.case = TRUE), item]
-  if (length(wohn_item) == 1 && wohn_item %in% names(med)) {
-    # Syntax: (wohn_item) := overwrites the dynamically found column
-    med[get(wohn_item) == "städtisch, stark bebaut, eher viel Grün", 
-        (wohn_item) := "städtisch, stark bebaut,\n eher viel Grün"]
-  }
-  
-  # Fix education (Schulabschluss) strings
-  schul_item <- codebook[grepl("Schulabschluss", label, ignore.case = TRUE), item]
-  if (length(schul_item) == 1 && schul_item %in% names(med)) {
-    med[get(schul_item) == "Fachhochschulreife oder Hochschulreife ((Fach-)Abitur)", 
-        (schul_item) := "(Fach-)Abitur"]
+  if ("label" %in% names(codebook) && "item" %in% names(codebook)) {
+    wohn_item <- codebook$item[grepl("Wohnumfeld", codebook$label, ignore.case = TRUE)]
+    if (length(wohn_item) == 1 && wohn_item %in% names(med)) {
+      med[get(wohn_item) == "städtisch, stark bebaut, eher viel Grün", 
+          (wohn_item) := "städtisch, stark bebaut,\n eher viel Grün"]
+    }
     
-    med[get(schul_item) == "Hauptschulabschluss / Volksschulabschluss", 
-        (schul_item) := "Hauptschulabschluss /\n Volksschulabschluss"]
+    schul_item <- codebook$item[grepl("Schulabschluss", codebook$label, ignore.case = TRUE)]
+    if (length(schul_item) == 1 && schul_item %in% names(med)) {
+      med[get(schul_item) == "Fachhochschulreife oder Hochschulreife ((Fach-)Abitur)", 
+          (schul_item) := "(Fach-)Abitur"]
+      
+      med[get(schul_item) == "Hauptschulabschluss / Volksschulabschluss", 
+          (schul_item) := "Hauptschulabschluss /\n Volksschulabschluss"]
+    }
   }
-  med[, MISSING := NULL]
+  
   return(med)
 }
-
-# library(readxl)
-# medicus <- read_excel("data/raw/data_medicus-app_2026-08-11.xlsx")
-# medicus_codebook <- read_excel("data/medicus_codebook.xlsx")
-# med <- load_and_clean_data("data/raw/data_medicus-app_2026-08-11.xlsx", medicus_codebook)
