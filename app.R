@@ -4,10 +4,12 @@ library(ggplot2)
 library(readxl)
 library(labelled)
 library(dplyr)
+library(stringr)
 library(plotly)
 library(bslib)
 library(shinycssloaders)
-
+library(tools)
+library(readr)
 
 # Workaround for Chromium Issue 468227 in Shinylive
 downloadButton <- function(...) {
@@ -104,11 +106,11 @@ server <- function(input, output, session) {
           
           fileInput(inputId = "data_upload", 
                     label = tr("upload_data"), 
-                    accept = c(".csv", ".xlsx", ".rds")),
+                    accept = c(".csv", ".xlsx", ".xls")),
           
           fileInput(inputId = "codebook_upload", 
                     label = tr("upload_cb"), 
-                    accept = c(".csv")),
+                    accept = c(".csv", ".xlsx", ".xls")),
           
           actionButton(inputId = "btn_ok", label = tr("btn_ok"), class = "btn-primary",
                        width = "100%",
@@ -183,11 +185,18 @@ server <- function(input, output, session) {
     # Require both files before proceeding
     req(input$data_upload, input$codebook_upload) 
     
-    # 1. Load Codebook
-    cb <- fread(input$codebook_upload$datapath)
+    # 1. Load data & codebook
+    all_data <- load_and_clean_data(
+      data_path = input$data_upload$datapath,
+      data_name = input$data_upload$name,           # Added
+      codebook_path = input$codebook_upload$datapath,
+      codebook_name = input$codebook_upload$name    # Added
+    )
+    
+    cb <- all_data$cb
     
     # 2. Load and clean the survey data
-    rv$daten <- load_and_clean_data(input$data_upload$datapath, cb)
+    rv$daten <- all_data$data
     
     # 3. Create the card deck 
     rv$deck <- create_deck(rv$daten, cb, scales)

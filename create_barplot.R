@@ -2,6 +2,7 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
                            bar_pos = "dodge",
                            fix_y = FALSE) {
   library(dplyr)
+  library(stringr)
   
   question_label <- ifelse(language == "EN", "Question", "Frage")
   share_label <- ifelse(language == "EN", "Share", "Anteil")
@@ -51,6 +52,7 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
         labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
              y = ifelse(share, share_label, count_label)) +
         scale_fill_discrete(labels = function(x) stringr::str_wrap(x, width = 40)) +
+        scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 15)) +
         theme_minimal(base_size = 18) +
         theme(axis.title.y = element_text(margin = margin(r = 15)), # Adds a 15px gap to the right of the title
               panel.grid.major.x = element_blank(),
@@ -91,7 +93,7 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
   } else if (any(class(item2) %in% c("single_choice", "categorical", "nominal"))) {
     
     # Distinct, qualitative palette for categories without inherent order
-    colors <- colorRampPalette(paletteer::paletteer_d("palettetown::vibrava"))(num_levels)
+    colors <- colorRampPalette(paletteer::paletteer_d("rcartocolor::Antique"))(num_levels)
     
   } else {
     
@@ -103,7 +105,8 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
     filter(!is.na(answer) & !is.na(i.answer)) %>%
     ggplot(aes(x = answer, y = plot_val, fill = i.answer)) +
     geom_col(position = col_position) +
-    scale_x_discrete(drop = FALSE) +
+    scale_x_discrete(drop = FALSE,
+                     labels = function(x) str_wrap(x, width = 15)) +
     labs(x = paste0(question_label, " 1: ", sub("[0-9].[0-9]", "", item1$label)),
          y = ifelse(share, share_label, count_label),
          fill = paste0(question_label, " 2: ", sub("[0-9].[0-9]", "", item2$label))) +

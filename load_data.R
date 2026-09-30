@@ -1,24 +1,39 @@
 library(readxl)
 library(data.table)
 library(labelled)
+library(tools)
 
-load_and_clean_data <- function(file_path, codebook) {
+# Notice we now accept the original file names as arguments
+load_and_clean_data <- function(data_path, data_name, codebook_path, codebook_name) {
   
-  # 1. Load the file
-  raw <- read_excel(file_path)
-  raw <- as.data.table(raw)
-  codebook <- as.data.table(codebook)
+  read_extension <- function(path, name) {
+    # Extract extension from the original name, not the temp path
+    data_extension <- tolower(file_ext(name))
+    
+    if (data_extension %in% c("xls", "xlsx")) {
+      raw <- read_excel(path, na = c("", "NA"))
+      return(as.data.table(raw))
+      
+    } else if (data_extension == "csv") {
+      # fread auto-detects commas vs semicolons perfectly
+      return(fread(path, na.strings = c("", "NA")))
+      
+    } else {
+      stop("Unsupported file format. Please upload an Excel or CSV file.")
+    }
+  }
+  
+  # 1. Load the files
+  med <- read_extension(data_path, data_name)
+  codebook <- read_extension(codebook_path, codebook_name)
   
   # 2. Dynamic column filter 
-  valid_cols <- grep("^(CASE|MISSING|[A-Z]{2}[0-9]{2})", names(raw), value = TRUE)
-  
-  # FIX 1: Use 'with = FALSE', which is much more stable in Shinylive than '..valid_cols'
-  med <- raw[, valid_cols, with = FALSE] 
+  valid_cols <- grep("^(CASE|MISSING|[A-Z]{2}[0-9]{2})", names(med), value = TRUE)
+  med <- med[, valid_cols, with = FALSE] 
   
   # ==========================================
   # 3. DYNAMIC RENAMING (e.g., BB01_01 -> BB01)
   # ==========================================
-  # FIX 2: Check if columns exist and use base-R subsetting to avoid WASM typo-crashes
   if ("class" %in% names(codebook) && "item" %in% names(codebook)) {
     single_items <- codebook$item[codebook$class %in% c("single", "numeric")]
   } else {
@@ -52,12 +67,10 @@ load_and_clean_data <- function(file_path, codebook) {
     gesch_item <- character(0)
   }
   
-  # FIX 3: Ensure MISSING actually exists before filtering
   if ("MISSING" %in% names(med)) {
     med <- med[MISSING != 100]
   }
   
-  # FIX 4: Replace %notin% with standard base R `!(... %in% ...)`
   if (length(alter_item) == 1 && length(gesch_item) == 1 && 
       alter_item %in% names(med) && gesch_item %in% names(med)) {
     med <- med[get(alter_item) >= 60 & !(get(gesch_item) %in% c("keine Angabe", "prefer not to say"))]
@@ -97,5 +110,5 @@ load_and_clean_data <- function(file_path, codebook) {
     }
   }
   
-  return(med)
+  return(list("data" = med, "cb" = codebook))
 }
