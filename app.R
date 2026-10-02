@@ -50,7 +50,7 @@ dict <- list(
   "fix_y" = c(DE = "Y-Achse auf 0-1 fixieren", EN = "Fix Y-axis to 0-1"),
   "welcome" = c(DE = "Bitte laden Sie Ihre Daten und das Codebook hoch und klicken Sie auf 'Daten verarbeiten'.", 
                 EN = "Please upload your data and codebook, then click 'Process Data' to begin."),
-  "kpi_n" = c(DE = "Gültige Teilnehmer gesamt", EN = "Vallid Total Respondents")
+  "kpi_n" = c(DE = "Gültige Teilnehmer gesamt", EN = "Valid Total Respondents")
   )
 
 # ==========================================
@@ -288,11 +288,7 @@ server <- function(input, output, session) {
     
     # Remove legend if checkbox is unticked
     if (!input$show_legend) {
-      p <- p + theme(legend.position = "none",
-                     plot.margin = margin(t = 10, r = 150, b = 10, l = 10),
-                     legend.text = element_text(size = 8),
-                     legend.title = element_text(size = 10),  
-                     legend.key.size = unit(0.5, "cm"))
+      p <- p + theme(legend.position = "none")
     }
     
     return(p)
@@ -311,8 +307,8 @@ server <- function(input, output, session) {
     
     ply %>%
       layout(
-        # 1. Provide a fixed minimum margin just for the legend
-        margin = list(b = 120), 
+        # Make the bottom margin dynamic based on the checkbox
+        margin = list(b = if(input$show_legend) 120 else 40),
         
         legend = list(
           orientation = "h",

@@ -71,11 +71,6 @@ load_and_clean_data <- function(data_path, data_name, codebook_path, codebook_na
     med <- med[MISSING != 100]
   }
   
-  if (length(alter_item) == 1 && length(gesch_item) == 1 && 
-      alter_item %in% names(med) && gesch_item %in% names(med)) {
-    med <- med[get(alter_item) >= 60 & !(get(gesch_item) %in% c("keine Angabe", "prefer not to say"))]
-  }
-  
   # ==========================================
   # 6.1 DYNAMIC COLUMN REMOVAL (Data Protection)
   # ==========================================

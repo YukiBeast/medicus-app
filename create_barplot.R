@@ -72,7 +72,6 @@ create_barplot <- function(item1, item2, data, share, language = "EN",
     count(answer, i.answer, .drop = FALSE)
   
   if (share) {
-    # FIX: Use a standard if/else instead of ifelse() to prevent vector truncation
     summary_data <- summary_data %>% 
       mutate(plot_val = if (sum(n) == 0) 0 else n / sum(n), .by = answer)
   } else {
